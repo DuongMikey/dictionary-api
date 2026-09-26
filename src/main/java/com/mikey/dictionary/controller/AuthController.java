@@ -16,7 +16,7 @@ public class AuthController {
         this.apiService = apiService;
     }
 
-    @GetMapping("/keys/generate")
+    @PostMapping("/keys/")
     public ResponseEntity<ApiKeyResponse> generateKey(){
         ApiKeyResponse response = apiService.generateKey();
         return ResponseEntity.ok(response);
@@ -28,7 +28,7 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/key")
+    @GetMapping("/keys")
     public ResponseEntity<List<ApiKeyResponse>> getKeys(){
         List<ApiKeyResponse> responses = apiService.getKeys();
         return ResponseEntity.ok(responses);
