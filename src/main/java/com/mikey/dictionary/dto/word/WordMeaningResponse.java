@@ -9,7 +9,6 @@ import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record WordMeaningResponse(
-        Integer id,
         String partOfSpeech,
         List<String> synonyms,
         List<String> antonyms,
@@ -18,7 +17,6 @@ public record WordMeaningResponse(
 ) {
     public static WordMeaningResponse from(WordMeaning entity) {
         return new WordMeaningResponse(
-                entity.getId(),
                 entity.getPartOfSpeech(),
                 splitToList(entity.getSynonyms()),
                 splitToList(entity.getAntonyms()),

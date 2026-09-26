@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.List;
 
 public record WordSearchResponse(
-        Integer id,
         String word,
         String phonetic,
         String audioUrl,
@@ -20,7 +19,6 @@ public record WordSearchResponse(
                 .toList();
 
         return new WordSearchResponse(
-                entity.getId(),
                 entity.getWord(),
                 entity.getPhonetic(),
                 entity.getAudioUrl(),

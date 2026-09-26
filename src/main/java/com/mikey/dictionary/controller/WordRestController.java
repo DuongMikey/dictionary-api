@@ -1,33 +1,26 @@
 package com.mikey.dictionary.controller;
 
 import com.mikey.dictionary.dto.word.WordSearchResponse;
-import com.mikey.dictionary.repository.WordRepository;
-import org.springframework.http.HttpStatus;
+import com.mikey.dictionary.service.WordService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
-@RequestMapping("/api/dictionary")
+@RequestMapping("/api/{apiKey}/dictionary")
 public class WordRestController {
 
-    private final WordRepository repository;
+    private final WordService wordService;
 
-    public WordRestController(WordRepository repository) {
-        this.repository = repository;
+    public WordRestController(WordService wordService) {
+        this.wordService = wordService;
     }
 
     @GetMapping("/search")
     public ResponseEntity<WordSearchResponse> searchWord(
-            @RequestParam(value = "word", required = true) String word
+            @RequestParam(value = "word") String word,
+            @PathVariable("apiKey") String apiKey
     ) {
-        WordSearchResponse response = repository.searchWord(word.trim())
-                .map(WordSearchResponse::from)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Cannot find word: " + word
-                ));
-
+        WordSearchResponse response = wordService.searchWord(word, apiKey);
         return ResponseEntity.ok(response);
     }
 }

@@ -18,4 +18,10 @@ CREATE TABLE word_meanings (
                                synonyms VARCHAR(500) NULL,
                                antonyms VARCHAR(500) NULL
 );
+CREATE TABLE api_keys (
+                          id INT AUTO_INCREMENT PRIMARY KEY,
+                          api_key VARCHAR(64) NOT NULL UNIQUE,
+                          is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE INDEX idx_word_meanings_word_id ON word_meanings(word_id);
