@@ -22,12 +22,13 @@ The project is designed to provide dictionary data through a self-hosted API ins
 * Antonyms (comma-separated storage, returned as a JSON array)
 
 
-* Custom API key authentication for dictionary search requests
-* Admin API protected by a secret key for API key management
+* Filter-based API key authentication for dictionary search requests via `api-key` header
+* Admin API protected by `Authorization` header for API key management
 * Activate and deactivate API keys
 * Multi-stage Docker build support
 * MySQL-compatible database support
-* Spring Data JPA / Hibernate integration
+* Spring Data JPA / Hibernate integration with custom attribute converters
+* Centralized exception handling via `HandlerExceptionResolver` and `@RestControllerAdvice`
 * Environment-variable based configuration
 
 ---
@@ -54,6 +55,8 @@ com.mikey.dictionary
 ├── controller
 │   ├── AuthController.java
 │   └── WordRestController.java
+├── converter
+│   └── StringListConverter.java
 ├── dto
 │   ├── api
 │   │   └── ApiKeyResponse.java
@@ -69,7 +72,8 @@ com.mikey.dictionary
 │   ├── GlobalExceptionHandler.java
 │   └── ResourceNotFoundException.java
 ├── filter
-│   └── AdminAuthFilter.java
+│   ├── AdminAuthFilter.java
+│   └── ApiKeyAuthFilter.java
 ├── repository
 │   ├── ApiKeyRepository.java
 │   └── WordRepository.java
@@ -182,7 +186,7 @@ This repository does not include a pre-populated dataset. The API is intentional
 | Synonyms | `word_meanings.synonyms` | Comma-separated (e.g., `fast, quick`) |
 | Antonyms | `word_meanings.antonyms` | Comma-separated (e.g., `slow, sluggish`) |
 
-The API splits comma-separated strings in `synonyms` and `antonyms` into clean JSON array lists in the response.
+The API uses `StringListConverter` to convert comma-separated strings in `synonyms` and `antonyms` into clean JSON array lists in the response.
 
 ---
 
@@ -319,36 +323,32 @@ docker run -d -p 8080:8080 \
 
 ## API Documentation
 
-### 1. Public Search Endpoint
+### 1. Dictionary Search Endpoint
 
-Requires an active API key passed as a path variable.
+Requires an active API key passed in the `api-key` header.
 
 #### Search for a Word
 
 * **Method:** `GET`
-* **URL:** `/api/{apiKey}/dictionary/search?word={word}`
+* **URL:** `/v3/api/dictionaries/search?word={word}`
+* **Header:** `api-key: <YOUR_API_KEY>`
 * **Example Request:**
-  `GET /api/3fa85f64-5717-4562-b3fc-2c963f66afa6/dictionary/search?word=hello`
+  `GET /v3/api/dictionaries/search?word=choke`
 
 **Response (`200 OK`):**
 
 ```json
 {
-  "word": "hello",
-  "phonetic": "/həˈloʊ/",
-  "audioUrl": "https://example.com/audio/hello.mp3",
+  "word": "choke",
+  "phonetic": "/tʃoʊk/",
+  "audioUrl": null,
   "meanings": [
     {
       "partOfSpeech": "noun",
-      "synonyms": [
-        "greeting",
-        "salutation"
-      ],
-      "antonyms": [
-        "goodbye"
-      ],
-      "definition": "An expression of greeting.",
-      "example": "She gave a friendly hello."
+      "synonyms": [],
+      "antonyms": [],
+      "definition": "A control on a carburetor to adjust the air/fuel mixture when the engine is cold.",
+      "example": null
     }
   ]
 }
@@ -359,20 +359,20 @@ Requires an active API key passed as a path variable.
 
 ### 2. Admin Endpoints
 
-All admin endpoints require the `Auth` header matching the configured `SECRET_KEY`.
+All admin endpoints require the `Authorization` header matching the configured `SECRET_KEY`.
 
 #### Generate an API Key
 
 * **Method:** `POST`
-* **URL:** `/api/admin/keys/`
-* **Header:** `Auth: <SECRET_KEY>`
+* **URL:** `/v3/api/admin/keys/`
+* **Header:** `Authorization: <SECRET_KEY>`
 * **Response (`200 OK`):**
 
 ```json
 {
   "id": 1,
-  "key": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "CreateAt": "2026-03-29T10:00:00",
+  "key": "27d5ef89-2bc7-44b1-b561-2f914a098910",
+  "createdAt": "2026-09-28T11:40:00",
   "isActive": true
 }
 
@@ -381,16 +381,16 @@ All admin endpoints require the `Auth` header matching the configured `SECRET_KE
 #### List API Keys
 
 * **Method:** `GET`
-* **URL:** `/api/admin/keys`
-* **Header:** `Auth: <SECRET_KEY>`
+* **URL:** `/v3/api/admin/keys`
+* **Header:** `Authorization: <SECRET_KEY>`
 * **Response (`200 OK`):**
 
 ```json
 [
   {
     "id": 1,
-    "key": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "CreateAt": "2026-03-29T10:00:00",
+    "key": "27d5ef89-2bc7-44b1-b561-2f914a098910",
+    "createdAt": "2026-09-26T20:34:05",
     "isActive": true
   }
 ]
@@ -400,8 +400,8 @@ All admin endpoints require the `Auth` header matching the configured `SECRET_KE
 #### Deactivate an API Key
 
 * **Method:** `DELETE`
-* **URL:** `/api/admin/keys/{id}`
-* **Header:** `Auth: <SECRET_KEY>`
+* **URL:** `/v3/api/admin/keys/{id}`
+* **Header:** `Authorization: <SECRET_KEY>`
 * **Response (`204 No Content`)**
 
 ---
@@ -412,11 +412,11 @@ All admin endpoints require the `Auth` header matching the configured `SECRET_KE
 Client Request
       │
       ▼
-Check API key validity
+Check Filter (AdminAuthFilter or ApiKeyAuthFilter)
       │
-      ├── Inactive or Not Found ──► 401 Unauthorized
+      ├── Missing / Invalid Header ──► 401 Unauthorized
       │
-      └── Active Key
+      └── Authorized
             │
             ▼
       Search database for word
@@ -431,29 +431,21 @@ Check API key validity
 
 ## Error Responses
 
-The API returns structured error payloads managed via `@RestControllerAdvice`:
+The API returns structured error payloads managed via `HandlerExceptionResolver` and `@RestControllerAdvice`:
 
 | Status Code | Meaning |
 | --- | --- |
 | `400 Bad Request` | Validation error or missing parameter |
-| `401 Unauthorized` | Invalid or inactive API key / Missing admin Auth header |
+| `401 Unauthorized` | Invalid or missing `api-key` / Missing or invalid admin `Authorization` header |
 | `404 Not Found` | Word not found in the database |
 
 **Example Error Response:**
 
 ```json
 {
-  "status": 404,
-  "message": "cant find word: testword",
-  "timestamp": "2026-03-29T10:15:30.123456"
+  "status": 401,
+  "message": "You do not have permission to perform this action",
+  "timestamp": "2026-09-28T11:37:49.0564454"
 }
 
 ```
-
----
-
-## License
-
-This project was built quickly over a single afternoon to serve as the backend for my personal vocabulary app.
-
-Feel free to use, modify, break, or adapt the code for your own learning projects, side hustles, or whatever you need—no formal license, restrictions, or strings attached.
