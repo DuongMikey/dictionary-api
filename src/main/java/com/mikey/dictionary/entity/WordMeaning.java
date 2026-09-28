@@ -1,5 +1,6 @@
 package com.mikey.dictionary.entity;
 
+import com.mikey.dictionary.converter.StringListConverter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -34,11 +35,13 @@ public class WordMeaning {
     @Column(name = "example", columnDefinition = "TEXT")
     private String example;
 
+    @Convert(converter = StringListConverter.class)
     @Column(name = "synonyms", length = 500)
-    private String synonyms;
+    private List<String> synonyms;
 
+    @Convert(converter = StringListConverter.class)
     @Column(name = "antonyms", length = 500)
-    private String antonyms;
+    private List<String> antonyms;
 
     public WordMeaning(String partOfSpeech, String definition, String example) {
         this.partOfSpeech = partOfSpeech;
@@ -46,7 +49,7 @@ public class WordMeaning {
         this.example = example;
     }
 
-    public WordMeaning( String partOfSpeech, String definition, String example, String synonyms, String antonyms) {
+    public WordMeaning( String partOfSpeech, String definition, String example, List<String> synonyms, List<String> antonyms) {
         this.partOfSpeech = partOfSpeech;
         this.definition = definition;
         this.example = example;

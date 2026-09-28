@@ -18,20 +18,11 @@ public record WordMeaningResponse(
     public static WordMeaningResponse from(WordMeaning entity) {
         return new WordMeaningResponse(
                 entity.getPartOfSpeech(),
-                splitToList(entity.getSynonyms()),
-                splitToList(entity.getAntonyms()),
+                entity.getSynonyms(),
+                entity.getAntonyms(),
                 entity.getDefinition(),
                 entity.getExample()
         );
     }
 
-    private static List<String> splitToList(String text) {
-        if (text == null || text.isBlank()) {
-            return Collections.emptyList();
-        }
-        return Arrays.stream(text.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .toList();
-    }
 }

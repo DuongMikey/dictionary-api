@@ -6,7 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/{apiKey}/dictionary")
+@RequestMapping("v3/api/dictionaries")
 public class WordRestController {
 
     private final WordService wordService;
@@ -17,10 +17,9 @@ public class WordRestController {
 
     @GetMapping("/search")
     public ResponseEntity<WordSearchResponse> searchWord(
-            @RequestParam(value = "word") String word,
-            @PathVariable("apiKey") String apiKey
+            @RequestParam(value = "word") String word
     ) {
-        WordSearchResponse response = wordService.searchWord(word, apiKey);
+        WordSearchResponse response = wordService.searchWord(word);
         return ResponseEntity.ok(response);
     }
 }

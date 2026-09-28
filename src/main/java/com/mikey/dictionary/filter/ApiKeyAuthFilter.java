@@ -1,6 +1,7 @@
 package com.mikey.dictionary.filter;
 
 import com.mikey.dictionary.exception.BadCredentialsException;
+import com.mikey.dictionary.repository.ApiKeyRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,26 +10,29 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import java.io.IOException;
-import java.util.Objects;
 
-public class AdminAuthFilter extends OncePerRequestFilter {
-    private final String SECRET_KEY;
+public class ApiKeyAuthFilter extends OncePerRequestFilter {
+
     private final HandlerExceptionResolver resolver;
+    private final ApiKeyRepository repository;
 
-    public AdminAuthFilter(String secretKey, HandlerExceptionResolver resolver) {
-        SECRET_KEY = secretKey;
+    public ApiKeyAuthFilter(HandlerExceptionResolver resolver, ApiKeyRepository repository) {
         this.resolver = resolver;
+        this.repository = repository;
     }
+
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String auth = request.getHeader("Authorization");
-
-        if (!Objects.equals(auth, SECRET_KEY)) {
+        String apiKey = request.getHeader("api-key");
+        if(apiKey == null || apiKey.isBlank()){
             resolver.resolveException(request,response,null,new BadCredentialsException("You do not have permission to perform this action"));
             return;
         }
-
-        filterChain.doFilter(request, response);
+        if (!repository.existsByApiKeyAndIsActiveTrue(apiKey)){
+            resolver.resolveException(request,response,null,new BadCredentialsException("Invalid or inactive api-key"));
+            return;
+        }
+        filterChain.doFilter(request,response);
     }
 }

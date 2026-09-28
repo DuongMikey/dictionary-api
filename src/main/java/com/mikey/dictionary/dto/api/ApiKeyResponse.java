@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 public record ApiKeyResponse(
         Integer id,
         String key,
-        LocalDateTime CreateAt,
+        LocalDateTime createdAt,
         Boolean isActive
 ) {
 }
