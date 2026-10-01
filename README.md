@@ -447,5 +447,6 @@ The API returns structured error payloads managed via `HandlerExceptionResolver`
   "message": "You do not have permission to perform this action",
   "timestamp": "2026-09-28T11:37:49.0564454"
 }
-
 ```
+
+

@@ -1,5 +1,6 @@
 package com.mikey.dictionary.config;
 
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.mikey.dictionary.filter.AdminAuthFilter;
 import com.mikey.dictionary.filter.ApiKeyAuthFilter;
 import com.mikey.dictionary.repository.ApiKeyRepository;
@@ -14,6 +15,7 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 public class FilterConfig {
 
     private final HandlerExceptionResolver resolver;
+    Caffeine
 
     public FilterConfig(@Qualifier("handlerExceptionResolver") HandlerExceptionResolver resolver) {
         this.resolver = resolver;
