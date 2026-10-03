@@ -14,4 +14,5 @@ public interface ApiKeyRepository extends JpaRepository<ApiKey,Integer> {
     List<ApiKeyResponse> getApiKeys();
 
     Boolean existsByApiKeyAndIsActiveTrue(String apiKey);
+
 }

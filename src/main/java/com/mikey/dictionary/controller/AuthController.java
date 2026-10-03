@@ -16,7 +16,7 @@ public class AuthController {
         this.apiService = apiService;
     }
 
-    @PostMapping("/keys/")
+    @PostMapping("/keys")
     public ResponseEntity<ApiKeyResponse> generateKey(){
         ApiKeyResponse response = apiService.generateKey();
         return ResponseEntity.ok(response);

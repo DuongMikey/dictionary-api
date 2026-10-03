@@ -1,9 +1,8 @@
 package com.mikey.dictionary.config;
 
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.mikey.dictionary.filter.AdminAuthFilter;
 import com.mikey.dictionary.filter.ApiKeyAuthFilter;
-import com.mikey.dictionary.repository.ApiKeyRepository;
+import com.mikey.dictionary.service.ApiService;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
@@ -15,7 +14,7 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 public class FilterConfig {
 
     private final HandlerExceptionResolver resolver;
-    Caffeine
+
 
     public FilterConfig(@Qualifier("handlerExceptionResolver") HandlerExceptionResolver resolver) {
         this.resolver = resolver;
@@ -34,10 +33,10 @@ public class FilterConfig {
 
     @Bean
     public FilterRegistrationBean<ApiKeyAuthFilter> apiKeyAuthFilterRegistration(
-            ApiKeyRepository repository
+            ApiService service
     ) {
         FilterRegistrationBean<ApiKeyAuthFilter> registrationBean = new FilterRegistrationBean<>();
-        registrationBean.setFilter(new ApiKeyAuthFilter(this.resolver, repository));
+        registrationBean.setFilter(new ApiKeyAuthFilter(this.resolver, service));
         registrationBean.addUrlPatterns("/v3/api/dictionaries/*");
         registrationBean.setOrder(0);
         return registrationBean;

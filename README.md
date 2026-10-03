@@ -1,8 +1,8 @@
 # Dictionary API
 
-A simple RESTful dictionary API backend built with Spring Boot and MySQL-compatible databases.
+A simple RESTful dictionary API backend built with Spring Boot, Caffeine Cache, and MySQL-compatible databases.
 
-The project is designed to provide dictionary data through a self-hosted API instead of relying on external dictionary services. It can be used as a backend service for vocabulary applications, language-learning tools, word games, or any service requiring vocabulary lookup.
+The project is designed to provide dictionary data through a self-hosted API instead of relying on external dictionary services. It can be used as a backend service for vocabulary applications, language-learning tools, word games, or any service requiring high-performance vocabulary lookup.
 
 > **Note:** This repository contains the backend source code and database schema only. No dictionary dataset is included. Users can import and use their own dataset in any language, provided they have the necessary rights to use that data.
 
@@ -22,6 +22,13 @@ The project is designed to provide dictionary data through a self-hosted API ins
 * Antonyms (comma-separated storage, returned as a JSON array)
 
 
+* **High-Performance In-Memory Caching (Caffeine):**
+* Multi-cache management via Spring's `CompositeCacheManager`
+* Caching for word search queries (`words`) with auto-normalization (lowercase & trim)
+* Caching for valid API keys (`api-keys`) with access-based TTL expiration
+* Automatic cache invalidation upon key deactivation
+
+
 * Filter-based API key authentication for dictionary search requests via `api-key` header
 * Admin API protected by `Authorization` header for API key management
 * Activate and deactivate API keys
@@ -37,6 +44,7 @@ The project is designed to provide dictionary data through a self-hosted API ins
 
 * Java 21
 * Spring Boot
+* Spring Cache & Caffeine Cache
 * Spring Data JPA
 * Hibernate
 * MySQL / TiDB / MySQL-compatible database
@@ -51,6 +59,7 @@ The project is designed to provide dictionary data through a self-hosted API ins
 ```text
 com.mikey.dictionary
 ├── config
+│   ├── CaffeineCacheConfig.java
 │   └── FilterConfig.java
 ├── controller
 │   ├── AuthController.java
@@ -85,6 +94,17 @@ com.mikey.dictionary
 └── DictionaryApplication.java
 
 ```
+
+---
+
+## Caching Strategy
+
+The application leverages **Caffeine Cache** alongside a `CompositeCacheManager` to minimize database hits:
+
+| Cache Name | Max Size | Eviction Policy | Notes |
+| --- | --- | --- | --- |
+| `words` | 10,000 | LRU (Size-based) | Caches query responses keyed by normalized words (`trim().toLowerCase()`). |
+| `api-keys` | 10 | Expire after 30 mins idle (`expireAfterAccess`) | Caches API key validity. Invalid keys (`false`) are not cached (`unless="#result == false"`), and entries are evicted immediately on deactivation. |
 
 ---
 
@@ -364,7 +384,7 @@ All admin endpoints require the `Authorization` header matching the configured `
 #### Generate an API Key
 
 * **Method:** `POST`
-* **URL:** `/v3/api/admin/keys/`
+* **URL:** `/v3/api/admin/keys`
 * **Header:** `Authorization: <SECRET_KEY>`
 * **Response (`200 OK`):**
 
@@ -406,7 +426,7 @@ All admin endpoints require the `Authorization` header matching the configured `
 
 ---
 
-## Authentication Flow
+## Authentication & Cache Flow
 
 ```text
 Client Request
@@ -416,14 +436,18 @@ Check Filter (AdminAuthFilter or ApiKeyAuthFilter)
       │
       ├── Missing / Invalid Header ──► 401 Unauthorized
       │
-      └── Authorized
+      └── Authorized (via Caffeine Cache / Database)
             │
             ▼
-      Search database for word
+      Search Cache for Word ("words")
             │
-            ├── Word found ─────────► 200 OK with word payload
+            ├── Cache Hit  ──────────► Return cached result
             │
-            └── Word not found ─────► 404 Not Found
+            └── Cache Miss ──────────► Query Database
+                                           │
+                                           ├── Word found ──────► Cache result & return 200 OK
+                                           │
+                                           └── Word not found ──► 404 Not Found
 
 ```
 
@@ -447,6 +471,5 @@ The API returns structured error payloads managed via `HandlerExceptionResolver`
   "message": "You do not have permission to perform this action",
   "timestamp": "2026-09-28T11:37:49.0564454"
 }
+
 ```
-
-
