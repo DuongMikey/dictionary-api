@@ -13,5 +13,5 @@ public interface WordRepository extends JpaRepository<Word,Integer> {
     Optional<Word> searchWord(@Param("word") String word);
 
     @Query("SELECT w FROM Word w LEFT JOIN FETCH w.meanings WHERE w.word IN :words")
-    List<Word> searchWords(@Param("word") List<String> words);
+    List<Word> searchWords(@Param("words") List<String> words);
 }
