@@ -5,9 +5,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface WordRepository extends JpaRepository<Word,Integer> {
     @Query("SELECT w FROM Word w LEFT JOIN FETCH w.meanings WHERE w.word = :word")
     Optional<Word> searchWord(@Param("word") String word);
+
+    @Query("SELECT w FROM Word w LEFT JOIN FETCH w.meanings WHERE w.word IN :words")
+    List<Word> searchWords(@Param("word") List<String> words);
 }
